@@ -14,6 +14,7 @@
 		F072F3522997832C0095598B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F072F3512997832C0095598B /* Assets.xcassets */; };
 		F072F3552997832C0095598B /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F072F3532997832C0095598B /* LaunchScreen.storyboard */; };
 		F072F35D2997A8770095598B /* VideoCreator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F072F35C2997A8770095598B /* VideoCreator.swift */; };
+		F072F35F2997BE210095598B /* segmentation_8bit.mlmodel in Sources */ = {isa = PBXBuildFile; fileRef = F072F35E2997BE210095598B /* segmentation_8bit.mlmodel */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -26,6 +27,7 @@
 		F072F3542997832C0095598B /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		F072F3562997832C0095598B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F072F35C2997A8770095598B /* VideoCreator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoCreator.swift; sourceTree = "<group>"; };
+		F072F35E2997BE210095598B /* segmentation_8bit.mlmodel */ = {isa = PBXFileReference; lastKnownFileType = file.mlmodel; name = segmentation_8bit.mlmodel; path = ../../../Downloads/segmentation_8bit.mlmodel; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -66,6 +68,7 @@
 				F072F3512997832C0095598B /* Assets.xcassets */,
 				F072F3532997832C0095598B /* LaunchScreen.storyboard */,
 				F072F3562997832C0095598B /* Info.plist */,
+				F072F35E2997BE210095598B /* segmentation_8bit.mlmodel */,
 			);
 			path = VideoTemplateMaker;
 			sourceTree = "<group>";
@@ -144,6 +147,7 @@
 				F072F35D2997A8770095598B /* VideoCreator.swift in Sources */,
 				F072F34D2997832B0095598B /* ViewController.swift in Sources */,
 				F072F3492997832B0095598B /* AppDelegate.swift in Sources */,
+				F072F35F2997BE210095598B /* segmentation_8bit.mlmodel in Sources */,
 				F072F34B2997832B0095598B /* SceneDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

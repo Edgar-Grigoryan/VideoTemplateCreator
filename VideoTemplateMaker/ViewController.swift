@@ -12,11 +12,9 @@ import Photos
 class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
-        let size = CGSize(width: 640, height: 640)
+        let size = CGSize(width: 1024, height: 1024)
         
-        self.fetchLibraryPhotos(targetSize: size) { photos in
-            VideoCreator.build(myPhotos: photos, outputSize: size)
-        }
+        VideoCreator.build(myPhotos: self.fetchAssetsPhotos(), outputSize: size)
     }
     
     func fetchLibraryPhotos(targetSize: CGSize, completion: @escaping ([UIImage]) -> Void) {
@@ -39,6 +37,14 @@ class ViewController: UIViewController {
                 fatalError("Cannot fetch library photos.")
             }
         }
+    }
+    
+    func fetchAssetsPhotos() -> [UIImage] {
+        var images = [UIImage]()
+        for i in 1...8 {
+            images.append(UIImage(named: "image\(i)")!)
+        }
+        return images
     }
 
     func saveVideoToLibrary(videoURL: URL) {
