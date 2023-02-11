@@ -11,6 +11,18 @@ import AVFoundation
 import Photos
 
 class VideoCreator {
+    private static let model = try! segmentation_8bit()
+    
+    private static func getMask(buffer: CVPixelBuffer) -> segmentation_8bitOutput? {
+        var result: segmentation_8bitOutput?
+        do {
+            result = try Self.model.prediction(img: buffer)
+        } catch (let err) {
+            print(err)
+        }
+        return result
+    }
+
     private static func saveVideoToLibrary(videoURL: URL) {
         PHPhotoLibrary.requestAuthorization { status in
             guard status == .authorized else {
@@ -21,9 +33,10 @@ class VideoCreator {
             PHPhotoLibrary.shared().performChanges({
                 PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: videoURL)
             }) { success, error in
-                print("VIDEO SAVED IN LIBRARY!!!")
                 if !success {
                     print("Error saving video: \(error!)")
+                } else {
+                    print("VIDEO SAVED IN LIBRARY!!!")
                 }
             }
         }
@@ -90,7 +103,6 @@ class VideoCreator {
                         let nextPhoto = photos.remove(at: 0)
                         let lastFrameTime = CMTimeMake(value: frameCount, timescale: fps)
                         let presentationTime = frameCount == 0 ? lastFrameTime : CMTimeAdd(lastFrameTime, frameDuration)
-                        print("presentationTime: \(frameCount) -- \(lastFrameTime)")
 
                         var pixelBuffer: CVPixelBuffer? = nil
                         let status: CVReturn = CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pixelBufferAdaptor.pixelBufferPool!, &pixelBuffer)
