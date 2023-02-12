@@ -9,31 +9,32 @@ import Foundation
 import CoreVideo
 import CoreImage
 import CoreML
+import UIKit
 
-let numberOfComponentsPerARBGPixel = 4
-let numberOfComponentsPerRGBAPixel = 4
-let numberOfComponentsPerGrayPixel = 3
-
-extension CGContext {
-    class func ARGBBitmapContext(width: Int, height: Int, withAlpha: Bool) -> CGContext? {
-        let alphaInfo = withAlpha ? CGImageAlphaInfo.premultipliedFirst : CGImageAlphaInfo.noneSkipFirst
-        let bmContext = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * numberOfComponentsPerARBGPixel, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: alphaInfo.rawValue)
-        return bmContext
-    }
-
-    // MARK: - RGBA bitmap context
-    class func RGBABitmapContext(width: Int, height: Int, withAlpha: Bool) -> CGContext? {
-        let alphaInfo = withAlpha ? CGImageAlphaInfo.premultipliedLast : CGImageAlphaInfo.noneSkipLast
-        let bmContext = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * numberOfComponentsPerRGBAPixel, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: alphaInfo.rawValue)
-        return bmContext
-    }
-
-    // MARK: - Gray bitmap context
-    class func GrayBitmapContext(width: Int, height: Int) -> CGContext? {
-        let bmContext = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * numberOfComponentsPerGrayPixel, space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue)
-        return bmContext
-    }
-}
+//let numberOfComponentsPerARBGPixel = 4
+//let numberOfComponentsPerRGBAPixel = 4
+//let numberOfComponentsPerGrayPixel = 3
+//
+//extension CGContext {
+//    class func ARGBBitmapContext(width: Int, height: Int, withAlpha: Bool) -> CGContext? {
+//        let alphaInfo = withAlpha ? CGImageAlphaInfo.premultipliedFirst : CGImageAlphaInfo.noneSkipFirst
+//        let bmContext = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * numberOfComponentsPerARBGPixel, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: alphaInfo.rawValue)
+//        return bmContext
+//    }
+//
+//    // MARK: - RGBA bitmap context
+//    class func RGBABitmapContext(width: Int, height: Int, withAlpha: Bool) -> CGContext? {
+//        let alphaInfo = withAlpha ? CGImageAlphaInfo.premultipliedLast : CGImageAlphaInfo.noneSkipLast
+//        let bmContext = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * numberOfComponentsPerRGBAPixel, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: alphaInfo.rawValue)
+//        return bmContext
+//    }
+//
+//    // MARK: - Gray bitmap context
+//    class func GrayBitmapContext(width: Int, height: Int) -> CGContext? {
+//        let bmContext = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * numberOfComponentsPerGrayPixel, space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue)
+//        return bmContext
+//    }
+//}
 
 extension CVPixelBuffer {
     func cgImage() -> CGImage? {
@@ -60,40 +61,79 @@ extension CGImage {
         return result
     }
     
-    func createMaskImage() -> CGImage? {
-        return CGImage(maskWidth: self.width, height: self.height, bitsPerComponent: self.bitsPerComponent, bitsPerPixel: self.bitsPerPixel, bytesPerRow: self.bytesPerRow, provider: self.dataProvider!, decode: nil, shouldInterpolate: false)
-    }
+//    func createMaskImage() -> CGImage? {
+//        return CGImage(maskWidth: self.width, height: self.height, bitsPerComponent: self.bitsPerComponent, bitsPerPixel: self.bitsPerPixel, bytesPerRow: self.bytesPerRow, provider: self.dataProvider!, decode: nil, shouldInterpolate: false)
+//    }
     
-    func masked(withImage maskImage: CGImage) -> CGImage? {
-        // Create an ARGB bitmap context
-        let originalWidth = self.width
-        let originalHeight = self.height
+//    func masked(withImage maskImage: CGImage) -> CGImage? {
+//        // Create an ARGB bitmap context
+//        let originalWidth = self.width
+//        let originalHeight = self.height
+//
+//        guard let bmContext = CGContext.ARGBBitmapContext(width: originalWidth, height: originalHeight, withAlpha: true) else {
+//            return nil
+//        }
+//
+//        // Image quality
+//        bmContext.setShouldAntialias(true)
+//        bmContext.setAllowsAntialiasing(true)
+//        bmContext.interpolationQuality = .high
+//
+//        // Image mask
+//        guard let mask = CGImage(maskWidth: maskImage.width, height: maskImage.height, bitsPerComponent: maskImage.bitsPerComponent, bitsPerPixel: maskImage.bitsPerPixel, bytesPerRow: maskImage.bytesPerRow, provider: maskImage.dataProvider!, decode: nil, shouldInterpolate: false) else {
+//            return nil
+//        }
+//
+//        // Draw the original image in the bitmap context
+//        let r = CGRect(x: 0, y: 0, width: originalWidth, height: originalHeight)
+//        bmContext.clip(to: r, mask: maskImage)
+//        bmContext.draw(self, in: r)
+//
+//        // Get the CGImage object
+//        guard let imageRefWithAlpha = bmContext.makeImage() else {
+//            return nil
+//        }
+//
+//        // Apply the mask
+//        return imageRefWithAlpha.masking(mask)
+//    }
+}
 
-        guard let bmContext = CGContext.ARGBBitmapContext(width: originalWidth, height: originalHeight, withAlpha: true) else {
-            return nil
+extension UIImage {
+    func maskWithColor(color: UIColor) -> UIImage? {
+        let maskingColors: [CGFloat] = [0, 130, 0, 130, 0, 130] // tones of black
+        let bounds = CGRect(origin: .zero, size: self.size)
+
+        let maskImage = self.cgImage!
+        var returnImage: UIImage?
+
+        // make sure image has no alpha channel
+        let rFormat = UIGraphicsImageRendererFormat()
+        rFormat.opaque = true
+        let renderer = UIGraphicsImageRenderer(size: self.size, format: rFormat)
+        let noAlphaImage = renderer.image {
+            (context) in
+            self.draw(at: .zero)
         }
 
-        // Image quality
-        bmContext.setShouldAntialias(true)
-        bmContext.setAllowsAntialiasing(true)
-        bmContext.interpolationQuality = .high
+        let noAlphaCGRef = noAlphaImage.cgImage
 
-        // Image mask
-        guard let mask = CGImage(maskWidth: maskImage.width, height: maskImage.height, bitsPerComponent: maskImage.bitsPerComponent, bitsPerPixel: maskImage.bitsPerPixel, bytesPerRow: maskImage.bytesPerRow, provider: maskImage.dataProvider!, decode: nil, shouldInterpolate: false) else {
-            return nil
+        if let imgRefCopy = noAlphaCGRef?.copy(maskingColorComponents: maskingColors) {
+
+            let rFormat = UIGraphicsImageRendererFormat()
+            rFormat.opaque = false
+            let renderer = UIGraphicsImageRenderer(size: self.size, format: rFormat)
+            returnImage = renderer.image {
+                (context) in
+                context.cgContext.scaleBy(x: 1, y: -1)
+                context.cgContext.translateBy(x: 0, y: -bounds.size.height)
+                context.cgContext.clip(to: bounds, mask: maskImage)
+                context.cgContext.setFillColor(color.cgColor)
+                context.cgContext.fill(bounds)
+                context.cgContext.draw(imgRefCopy, in: bounds)
+            }
+
         }
-
-        // Draw the original image in the bitmap context
-        let r = CGRect(x: 0, y: 0, width: originalWidth, height: originalHeight)
-        bmContext.clip(to: r, mask: maskImage)
-        bmContext.draw(self, in: r)
-
-        // Get the CGImage object
-        guard let imageRefWithAlpha = bmContext.makeImage() else {
-            return nil
-        }
-
-        // Apply the mask
-        return imageRefWithAlpha.masking(mask)
+        return returnImage
     }
 }
