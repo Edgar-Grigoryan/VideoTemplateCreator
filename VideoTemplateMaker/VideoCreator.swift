@@ -11,19 +11,8 @@ import AVFoundation
 import Photos
 
 class VideoCreator {
-    private static let model = try! segmentation_8bit()
-    
-    private static func getMask(buffer: CVPixelBuffer) -> segmentation_8bitOutput? {
-        var result: segmentation_8bitOutput?
-        do {
-            result = try Self.model.prediction(img: buffer)
-        } catch (let err) {
-            print(err)
-        }
-        return result
-    }
-
     private static func saveVideoToLibrary(videoURL: URL) {
+        print(videoURL)
         PHPhotoLibrary.requestAuthorization { status in
             guard status == .authorized else {
                 print("Error saving video: unauthorized access")
