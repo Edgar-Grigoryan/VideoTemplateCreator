@@ -46,7 +46,7 @@ extension CVPixelBuffer {
 }
 
 extension CGImage {
-    func generateMask() -> CGImage? {
+    func generateGrayScaleMask() -> CGImage? {
         var result: CGImage?
         do {
             let configuration = MLModelConfiguration()
@@ -135,5 +135,46 @@ extension UIImage {
 
         }
         return returnImage
+    }
+    
+    func generateMask() -> UIImage? {
+        guard let grayScaleMask = self.cgImage?.generateGrayScaleMask() else { return nil }
+
+        let grayScaleUIImage = UIImage(cgImage: grayScaleMask)
+        return grayScaleUIImage.maskWithColor(color: .clear)
+    }
+    
+    func generateObject() -> UIImage? {
+        guard let mask = self.generateMask() else { return nil }
+        
+        let size = mask.size
+        let bounds = CGRect(origin: .zero, size: size)
+        
+        UIGraphicsBeginImageContext(size)
+
+        mask.draw(in: bounds)
+        self.draw(in: bounds, blendMode: .sourceAtop, alpha: 1)
+        let resultImage = UIGraphicsGetImageFromCurrentImageContext()
+
+        UIGraphicsEndImageContext()
+        
+        return resultImage
+    }
+    
+    static func mergedImages(images: [UIImage]) -> UIImage? {
+        let size = images[0].size
+
+        UIGraphicsBeginImageContext(size)
+        let bounds = CGRect(origin: .zero, size: size)
+
+        for image in images {
+            image.draw(in: bounds)
+        }
+
+        let resultImage = UIGraphicsGetImageFromCurrentImageContext()
+
+        UIGraphicsEndImageContext()
+        
+        return resultImage
     }
 }

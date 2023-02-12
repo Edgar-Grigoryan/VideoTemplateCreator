@@ -13,8 +13,7 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         let size = CGSize(width: 1024, height: 1024)
-//        self.aaaaa()
-        VideoCreator.build(myPhotos: self.fetchAssetsPhotos(), outputSize: size)
+        VideoCreator.build(myPhotos: self.generateVideoTemplateImages(), outputSize: size)
     }
 
     func fetchLibraryPhotos(targetSize: CGSize, completion: @escaping ([UIImage]) -> Void) {
@@ -66,26 +65,20 @@ class ViewController: UIViewController {
         }
     }
 
-    func aaaaa() {
-        let originalImage = self.fetchAssetsPhotos()[0]
-        let newmask = originalImage.cgImage!.generateMask()!
-        
-        let photo = UIImage(cgImage: newmask)
-        let mask = photo.maskWithColor(color: .clear)!
-        let size = mask.size
-        let bounds = CGRect(origin: .zero, size: size)
-        
-        UIGraphicsBeginImageContext(size);
-        mask.draw(in: bounds)
-        originalImage.draw(in: bounds, blendMode: .sourceAtop, alpha: 1)
-    
-//        [uiimage drawAtPoint:CGPointZero blendMode:kCGBlendModeOverlay alpha:1.0];
-//        [uiimage2 drawAtPoint:CGPointZero blendMode:kCGBlendModeOverlay alpha:1.0];
+    func generateVideoTemplateImages() -> [UIImage] {
+        var resultImages = [UIImage]()
 
-        let blendedImage = UIGraphicsGetImageFromCurrentImageContext()
-
-        UIGraphicsEndImageContext();
+        let fetchedImages = self.fetchAssetsPhotos()
+        resultImages.append(fetchedImages[0])
         
-        print("ssss")
+        for i in 1..<fetchedImages.count {
+            let originalImage = fetchedImages[i]
+            let object = originalImage.generateObject()!
+            let result = UIImage.mergedImages(images: [fetchedImages[i - 1], object])!
+            resultImages.append(result)
+            resultImages.append(originalImage)
+        }
+        
+        return resultImages
     }
 }
