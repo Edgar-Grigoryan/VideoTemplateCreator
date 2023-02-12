@@ -13,7 +13,8 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         let size = CGSize(width: 1024, height: 1024)
-//        VideoCreator.build(myPhotos: self.fetchAssetsPhotos(), outputSize: size)
+//        self.aaaaa()
+        VideoCreator.build(myPhotos: self.fetchAssetsPhotos(), outputSize: size)
     }
 
     func fetchLibraryPhotos(targetSize: CGSize, completion: @escaping ([UIImage]) -> Void) {
@@ -65,16 +66,26 @@ class ViewController: UIViewController {
         }
     }
 
-//    func aaaaa() {
-//        let imageSize: CGFloat = 1024
-//        let size = CGSize(width: imageSize, height: imageSize)
-//        let originalImage = self.fetchAssetsPhotos()[0]
-//        let rect = CGRect(origin: CGPoint(x: originalImage.size.width / 2, y: CGFloat(Int(originalImage.size.height / 2.0))), size: .zero).insetBy(dx: -imageSize / 2, dy: -imageSize / 2)
-//        let image = originalImage.cgImage!.cropping(to: rect)!
-//        let mask = originalImage.cgImage!.generateMask()!
-//        
-//        let photo = UIImage(cgImage: mask)
-//        let k = photo.maskWithColor(color: .clear)
-//        print("ssss")
-//    }
+    func aaaaa() {
+        let originalImage = self.fetchAssetsPhotos()[0]
+        let newmask = originalImage.cgImage!.generateMask()!
+        
+        let photo = UIImage(cgImage: newmask)
+        let mask = photo.maskWithColor(color: .clear)!
+        let size = mask.size
+        let bounds = CGRect(origin: .zero, size: size)
+        
+        UIGraphicsBeginImageContext(size);
+        mask.draw(in: bounds)
+        originalImage.draw(in: bounds, blendMode: .sourceAtop, alpha: 1)
+    
+//        [uiimage drawAtPoint:CGPointZero blendMode:kCGBlendModeOverlay alpha:1.0];
+//        [uiimage2 drawAtPoint:CGPointZero blendMode:kCGBlendModeOverlay alpha:1.0];
+
+        let blendedImage = UIGraphicsGetImageFromCurrentImageContext()
+
+        UIGraphicsEndImageContext();
+        
+        print("ssss")
+    }
 }
