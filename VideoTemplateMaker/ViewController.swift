@@ -13,7 +13,9 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         let size = CGSize(width: 1024, height: 1024)
-        VideoCreator.build(myPhotos: self.generateVideoTemplateImages(), outputSize: size)
+        VideoCreator.build(myPhotos: self.generateVideoTemplateImages(), outputSize: size) { error, url in
+            <#code#>
+        }
     }
 
     func fetchLibraryPhotos(targetSize: CGSize, completion: @escaping ([UIImage]) -> Void) {

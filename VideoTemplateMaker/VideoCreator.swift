@@ -31,11 +31,12 @@ class VideoCreator {
         }
     }
 
-    static func build(myPhotos: [UIImage], outputSize: CGSize) {
+    static func build(myPhotos: [UIImage], outputSize: CGSize, completion: @escaping (_ error: Error?, _ url: URL?) -> Void) {
         var photos = myPhotos
         let urls = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
         guard let documentDirectory: URL = urls.first else {
-            fatalError("documentDir Error")
+            completion(NSError(domain: "documentDir Error", code: 1), nil)
+            return
         }
         
         let videoOutputURL = documentDirectory.appending(component: "OutputVideo.mp4")
@@ -43,12 +44,14 @@ class VideoCreator {
             do {
                 try FileManager.default.removeItem(atPath: videoOutputURL.path)
             } catch {
-                fatalError("Unable to delete file: \(error) : \(#function).")
+                completion(NSError(domain: "Unable to delete file: \(error) : \(#function).", code: 2), nil)
+                return
             }
         }
 
         guard let videoWriter = try? AVAssetWriter(outputURL: videoOutputURL, fileType: AVFileType.mp4) else {
-            fatalError("AVAssetWriter error")
+            completion(NSError(domain: "AVAssetWriter error", code: 3), nil)
+            return
         }
 
         let outputSettings: [String : Any] = [
@@ -58,7 +61,8 @@ class VideoCreator {
         ]
 
         guard videoWriter.canApply(outputSettings: outputSettings, forMediaType: AVMediaType.video) else {
-            fatalError("Negative : Can't apply the Output settings...")
+            completion(NSError(domain: "Negative : Can't apply the Output settings...", code: 4), nil)
+            return
         }
 
         let videoWriterInput = AVAssetWriterInput(mediaType: AVMediaType.video, outputSettings: outputSettings)
@@ -134,9 +138,105 @@ class VideoCreator {
                 videoWriterInput.markAsFinished()
                 videoWriter.finishWriting { () -> Void in
                     print("Video Creation FINISHED!!!")
-                    Self.saveVideoToLibrary(videoURL: videoOutputURL)
+                    completion(nil, videoOutputURL)
                 }
             })
         }
     }
 }
+
+//extension VideoCreator {
+//    static func mergeVideoAndAudio(videoUrl: URL, audioUrl: URL, shouldFlipHorizontally: Bool = false, completion: @escaping (_ error: Error?, _ url: URL?) -> Void) {
+//
+//               let mixComposition = AVMutableComposition()
+//               var mutableCompositionVideoTrack = [AVMutableCompositionTrack]()
+//               var mutableCompositionAudioTrack = [AVMutableCompositionTrack]()
+//               var mutableCompositionAudioOfVideoTrack = [AVMutableCompositionTrack]()
+//
+//               //start merge
+//
+//               let aVideoAsset = AVAsset(url: videoUrl)
+//               let aAudioAsset = AVAsset(url: audioUrl)
+//
+//               let compositionAddVideo = mixComposition.addMutableTrack(withMediaType: AVMediaTypeVideo,
+//                                                                              preferredTrackID: kCMPersistentTrackID_Invalid)
+//
+//               let compositionAddAudio = mixComposition.addMutableTrack(withMediaType: AVMediaTypeAudio,
+//                                                                            preferredTrackID: kCMPersistentTrackID_Invalid)
+//
+//               let compositionAddAudioOfVideo = mixComposition.addMutableTrack(withMediaType: AVMediaTypeAudio,
+//                                                                                   preferredTrackID: kCMPersistentTrackID_Invalid)
+//
+//               let aVideoAssetTrack: AVAssetTrack = aVideoAsset.tracks(withMediaType: AVMediaTypeVideo)[0]
+//               let aAudioOfVideoAssetTrack: AVAssetTrack? = aVideoAsset.tracks(withMediaType: AVMediaTypeAudio).first
+//               let aAudioAssetTrack: AVAssetTrack = aAudioAsset.tracks(withMediaType: AVMediaTypeAudio)[0]
+//
+//               // Default must have tranformation
+//               compositionAddVideo.preferredTransform = aVideoAssetTrack.preferredTransform
+//
+//               if shouldFlipHorizontally {
+//                   // Flip video horizontally
+//                   var frontalTransform: CGAffineTransform = CGAffineTransform(scaleX: -1.0, y: 1.0)
+//                   frontalTransform = frontalTransform.translatedBy(x: -aVideoAssetTrack.naturalSize.width, y: 0.0)
+//                   frontalTransform = frontalTransform.translatedBy(x: 0.0, y: -aVideoAssetTrack.naturalSize.width)
+//                   compositionAddVideo.preferredTransform = frontalTransform
+//               }
+//
+//               mutableCompositionVideoTrack.append(compositionAddVideo)
+//               mutableCompositionAudioTrack.append(compositionAddAudio)
+//               mutableCompositionAudioOfVideoTrack.append(compositionAddAudioOfVideo)
+//
+//               do {
+//                   try mutableCompositionVideoTrack[0].insertTimeRange(CMTimeRangeMake(kCMTimeZero,
+//                                                                                       aVideoAssetTrack.timeRange.duration),
+//                                                                       of: aVideoAssetTrack,
+//                                                                       at: kCMTimeZero)
+//
+//                   //In my case my audio file is longer then video file so i took videoAsset duration
+//                   //instead of audioAsset duration
+//                   try mutableCompositionAudioTrack[0].insertTimeRange(CMTimeRangeMake(kCMTimeZero,
+//                                                                                       aVideoAssetTrack.timeRange.duration),
+//                                                                       of: aAudioAssetTrack,
+//                                                                       at: kCMTimeZero)
+//
+//                   // adding audio (of the video if exists) asset to the final composition
+//                   if let aAudioOfVideoAssetTrack = aAudioOfVideoAssetTrack {
+//                       try mutableCompositionAudioOfVideoTrack[0].insertTimeRange(CMTimeRangeMake(kCMTimeZero,
+//                                                                                                  aVideoAssetTrack.timeRange.duration),
+//                                                                                  of: aAudioOfVideoAssetTrack,
+//                                                                                  at: kCMTimeZero)
+//                   }
+//               } catch {
+//                   print(error.localizedDescription)
+//               }
+//
+//               // Exporting
+//               let savePathUrl: URL = URL(fileURLWithPath: NSHomeDirectory() + "/Documents/newVideo.mp4")
+//               do { // delete old video
+//                   try FileManager.default.removeItem(at: savePathUrl)
+//               } catch { print(error.localizedDescription) }
+//
+//               let assetExport: AVAssetExportSession = AVAssetExportSession(asset: mixComposition, presetName: AVAssetExportPresetHighestQuality)!
+//               assetExport.outputFileType = AVFileTypeMPEG4
+//               assetExport.outputURL = savePathUrl
+//               assetExport.shouldOptimizeForNetworkUse = true
+//
+//               assetExport.exportAsynchronously { () -> Void in
+//                   switch assetExport.status {
+//                   case AVAssetExportSessionStatus.completed:
+//                       print("success")
+//                       completion(nil, savePathUrl)
+//                   case AVAssetExportSessionStatus.failed:
+//                       print("failed \(assetExport.error?.localizedDescription ?? "error nil")")
+//                       completion(assetExport.error, nil)
+//                   case AVAssetExportSessionStatus.cancelled:
+//                       print("cancelled \(assetExport.error?.localizedDescription ?? "error nil")")
+//                       completion(assetExport.error, nil)
+//                   default:
+//                       print("complete")
+//                       completion(assetExport.error, nil)
+//                   }
+//               }
+//
+//           }
+//}
