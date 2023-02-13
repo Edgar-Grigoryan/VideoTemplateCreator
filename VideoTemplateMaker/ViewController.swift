@@ -13,8 +13,11 @@ class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         let size = CGSize(width: 1024, height: 1024)
-        VideoCreator.build(myPhotos: self.generateVideoTemplateImages(), outputSize: size) { error, url in
-            <#code#>
+        VideoCreator.build(images: self.generateVideoTemplateImages(), outputSize: size) { error, url in
+            let audioURL = Bundle.main.url(forResource: "music", withExtension: "aac")!
+            VideoCreator.mergeVideoAndAudio(videoUrl: url!, audioUrl: audioURL) { error, url in
+                print("ALL TASKS ARE FINISHED!!!!! URL: \(url)")
+            }
         }
     }
 

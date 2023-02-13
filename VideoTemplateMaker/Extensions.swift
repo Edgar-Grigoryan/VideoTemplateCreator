@@ -178,3 +178,9 @@ extension UIImage {
         return resultImage
     }
 }
+
+extension FileManager {
+    var documentDirectory: URL {
+        return self.urls(for: .documentDirectory, in: .userDomainMask).first!        
+    }
+}
