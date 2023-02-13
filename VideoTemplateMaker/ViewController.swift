@@ -51,25 +51,6 @@ class ViewController: UIViewController {
         return images
     }
 
-    func saveVideoToLibrary(videoURL: URL) {
-        PHPhotoLibrary.requestAuthorization { status in
-            // Return if unauthorized
-            guard status == .authorized else {
-                print("Error saving video: unauthorized access")
-                return
-            }
-
-            // If here, save video to library
-            PHPhotoLibrary.shared().performChanges({
-                PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: videoURL)
-            }) { success, error in
-                if !success {
-                    print("Error saving video: \(error!)")
-                }
-            }
-        }
-    }
-
     func generateVideoTemplateImages() -> [UIImage] {
         var resultImages = [UIImage]()
 
