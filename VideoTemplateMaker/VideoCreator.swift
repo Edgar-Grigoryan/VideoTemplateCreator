@@ -142,7 +142,7 @@ class VideoCreator {
 }
 
 extension VideoCreator {
-    static func mergeVideoAndAudio(videoUrl: URL, audioUrl: URL, shouldFlipHorizontally: Bool = false, completion: @escaping (_ error: Error?, _ url: URL?) -> Void) {
+    static func mergeVideoAndAudio(videoUrl: URL, audioUrl: URL, shouldFlipHorizontally: Bool = false) async throws -> Result<URL, Error> {
         let mixComposition = AVMutableComposition()
         var mutableCompositionVideoTrack = [AVMutableCompositionTrack]()
         var mutableCompositionAudioTrack = [AVMutableCompositionTrack]()
@@ -154,32 +154,30 @@ extension VideoCreator {
         let aAudioAsset = AVAsset(url: audioUrl)
         
         guard let compositionAddVideo = mixComposition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid) else {
-            completion(NSError(domain: "something went wrong", code: 1), nil)
-            return
+            return .failure(NSError(domain: "something went wrong", code: 1))
         }
         
         guard let compositionAddAudio = mixComposition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) else {
-            completion(NSError(domain: "something went wrong", code: 2), nil)
-            return
+            return .failure(NSError(domain: "something went wrong", code: 2))
         }
         
         guard let compositionAddAudioOfVideo = mixComposition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) else {
-            completion(NSError(domain: "something went wrong", code: 3), nil)
-            return
+            return .failure(NSError(domain: "something went wrong", code: 3))
         }
-            
-        let aVideoAssetTrack: AVAssetTrack = aVideoAsset.tracks(withMediaType: .video)[0]
-        let aAudioOfVideoAssetTrack: AVAssetTrack? = aVideoAsset.tracks(withMediaType: .audio).first
-        let aAudioAssetTrack: AVAssetTrack = aAudioAsset.tracks(withMediaType: .audio)[0]
+        
+        let aVideoAssetTrack: AVAssetTrack = try await aVideoAsset.loadTracks(withMediaType: .video).first!
+        let aAudioOfVideoAssetTrack: AVAssetTrack? = try await aVideoAsset.loadTracks(withMediaType: .audio).first
+        let aAudioAssetTrack: AVAssetTrack = try await aAudioAsset.loadTracks(withMediaType: .audio).first!
         
         // Default must have tranformation
-        compositionAddVideo.preferredTransform = aVideoAssetTrack.preferredTransform
+        compositionAddVideo.preferredTransform = try await aVideoAssetTrack.load(.preferredTransform)
         
         if shouldFlipHorizontally {
             // Flip video horizontally
             var frontalTransform: CGAffineTransform = CGAffineTransform(scaleX: -1.0, y: 1.0)
-            frontalTransform = frontalTransform.translatedBy(x: -aVideoAssetTrack.naturalSize.width, y: 0.0)
-            frontalTransform = frontalTransform.translatedBy(x: 0.0, y: -aVideoAssetTrack.naturalSize.width)
+            
+            frontalTransform = try await frontalTransform.translatedBy(x: -aVideoAssetTrack.load(.naturalSize).width, y: 0.0)
+            frontalTransform = try await frontalTransform.translatedBy(x: 0.0, y: -aVideoAssetTrack.load(.naturalSize).width)
             compositionAddVideo.preferredTransform = frontalTransform
         }
         
@@ -187,42 +185,33 @@ extension VideoCreator {
         mutableCompositionAudioTrack.append(compositionAddAudio)
         mutableCompositionAudioOfVideoTrack.append(compositionAddAudioOfVideo)
         
-        do {
-            try mutableCompositionVideoTrack[0].insertTimeRange(CMTimeRangeMake(start: .zero, duration: aVideoAssetTrack.timeRange.duration), of: aVideoAssetTrack, at: .zero)
-            
-            //In my case my audio file is longer then video file so i took videoAsset duration
-            //instead of audioAsset duration
-            try mutableCompositionAudioTrack[0].insertTimeRange(CMTimeRangeMake(start: .zero, duration: aVideoAssetTrack.timeRange.duration), of: aAudioAssetTrack, at: .zero)
-            
-            // adding audio (of the video if exists) asset to the final composition
-            if let aAudioOfVideoAssetTrack = aAudioOfVideoAssetTrack {
-                try mutableCompositionAudioOfVideoTrack[0].insertTimeRange(CMTimeRangeMake(start: .zero, duration: aVideoAssetTrack.timeRange.duration), of: aAudioOfVideoAssetTrack, at: .zero)
-            }
-        } catch {
-            print(error.localizedDescription)
+        try await mutableCompositionVideoTrack.first!.insertTimeRange(CMTimeRangeMake(start: .zero, duration: aVideoAssetTrack.load(.timeRange).duration), of: aVideoAssetTrack, at: .zero)
+        
+        //In my case my audio file is longer then video file so i took videoAsset duration
+        //instead of audioAsset duration
+        try await mutableCompositionAudioTrack.first!.insertTimeRange(CMTimeRangeMake(start: .zero, duration: aVideoAssetTrack.load(.timeRange).duration), of: aAudioAssetTrack, at: .zero)
+        
+        // adding audio (of the video if exists) asset to the final composition
+        if let aAudioOfVideoAssetTrack = aAudioOfVideoAssetTrack {
+            try await mutableCompositionAudioOfVideoTrack.first!.insertTimeRange(CMTimeRangeMake(start: .zero, duration: aVideoAssetTrack.load(.timeRange).duration), of: aAudioOfVideoAssetTrack, at: .zero)
         }
         
         // Exporting
         let savePathUrl: URL = URL(fileURLWithPath: NSHomeDirectory() + "/Documents/newVideo.mp4")
-        do { // delete old video
-            try FileManager.default.removeItem(at: savePathUrl)
-        } catch {
-            print(error.localizedDescription)
-        }
+        // delete old video
+        try FileManager.default.removeItem(at: savePathUrl)
         
         let assetExport: AVAssetExportSession = AVAssetExportSession(asset: mixComposition, presetName: AVAssetExportPresetHighestQuality)!
         assetExport.outputFileType = .mp4
         assetExport.outputURL = savePathUrl
         assetExport.shouldOptimizeForNetworkUse = true
         
-        assetExport.exportAsynchronously { () -> Void in
-            switch assetExport.status {
-            case .completed:
-                completion(nil, savePathUrl)
-            default:
-                completion(assetExport.error, nil)
-            }
-        }
+        await assetExport.export()
         
+        if let error = assetExport.error {
+            return .failure(error)
+        }
+
+        return .success(savePathUrl)
     }
 }

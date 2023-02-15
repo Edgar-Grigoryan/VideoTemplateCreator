@@ -12,11 +12,18 @@ import Photos
 class ViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
-        let size = CGSize(width: 1024, height: 1024)
-        VideoCreator.build(images: self.generateVideoTemplateImages(), outputSize: size) { error, url in
-            let audioURL = Bundle.main.url(forResource: "music", withExtension: "aac")!
-            VideoCreator.mergeVideoAndAudio(videoUrl: url!, audioUrl: audioURL) { error, url in
-                print("ALL TASKS ARE FINISHED!!!!! URL: \(url)")
+        Task {
+            let size = CGSize(width: 1024, height: 1024)
+            VideoCreator.build(images: self.generateVideoTemplateImages(), outputSize: size) { error, url in
+                let audioURL = Bundle.main.url(forResource: "music", withExtension: "aac")!
+                Task {
+                    do {
+                        let videoURL = try await VideoCreator.mergeVideoAndAudio(videoUrl: url!, audioUrl: audioURL)
+                        print("ALL TASKS ARE FINISHED!!!!! URL: \(videoURL)")
+                    } catch (let error) {
+                        print(error.localizedDescription)
+                    }
+                }
             }
         }
     }
