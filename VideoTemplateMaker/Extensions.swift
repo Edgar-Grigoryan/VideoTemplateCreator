@@ -12,6 +12,7 @@ import CoreML
 import UIKit
 
 extension CVPixelBuffer {
+    // Creates CGImage from CVPixelBuffer
     func cgImage() -> CGImage? {
         let context = CGContext(data: nil, width: 1024, height: 1024, bitsPerComponent: 8, bytesPerRow: CVPixelBufferGetBytesPerRow(self), space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue)!
         let ciContext = CIContext.init(cgContext: context)
@@ -21,6 +22,7 @@ extension CVPixelBuffer {
 }
 
 extension CGImage {
+    // Geneates an image from givent CGImage with White object and Black background
     func generateGrayScaleMask() -> CGImage? {
         var result: CGImage?
         do {
@@ -99,6 +101,7 @@ extension UIImage {
         return resultImage
     }
     
+    // Creates an image (UIImage) with merging an array of images
     static func mergedImages(images: [UIImage]) -> UIImage? {
         let size = images[0].size
 
@@ -118,6 +121,7 @@ extension UIImage {
 }
 
 extension FileManager {
+    // Returns the Document directory
     var documentDirectory: URL {
         return self.urls(for: .documentDirectory, in: .userDomainMask).first!        
     }

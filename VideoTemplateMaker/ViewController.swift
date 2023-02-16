@@ -14,7 +14,8 @@ class ViewController: UIViewController {
         super.viewDidLoad()
         Task {
             let size = CGSize(width: 1024, height: 1024)
-            VideoCreator.build(images: self.generateVideoTemplateImages(), outputSize: size) { error, url in
+            let images = self.generateVideoTemplateImages()
+            VideoCreator.build(images: images, outputSize: size) { error, url in
                 let audioURL = Bundle.main.url(forResource: "music", withExtension: "aac")!
                 Task {
                     do {
@@ -24,28 +25,6 @@ class ViewController: UIViewController {
                         print(error.localizedDescription)
                     }
                 }
-            }
-        }
-    }
-
-    func fetchLibraryPhotos(targetSize: CGSize, completion: @escaping ([UIImage]) -> Void) {
-        PHPhotoLibrary.requestAuthorization { (status) in
-            switch status {
-            case .authorized:
-                let assets = PHAsset.fetchAssets(with: .image, options: nil)
-                var images = [UIImage]()
-                assets.enumerateObjects { asset, index, stop in
-                    let options = PHImageRequestOptions()
-                    options.isSynchronous = true
-                    options.deliveryMode = .highQualityFormat
-
-                    PHImageManager.default().requestImage(for: asset, targetSize: targetSize, contentMode: .default, options: options) { image, info in
-                        images.append(image!)
-                    }
-                }
-                completion(images)
-            default:
-                fatalError("Cannot fetch library photos.")
             }
         }
     }

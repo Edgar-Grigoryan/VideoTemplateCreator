@@ -13,26 +13,6 @@ import AVKit
 import AssetsLibrary
 
 class VideoCreator {
-    private static func saveVideoToLibrary(videoURL: URL) {
-        print(videoURL)
-        PHPhotoLibrary.requestAuthorization { status in
-            guard status == .authorized else {
-                print("Error saving video: unauthorized access")
-                return
-            }
-
-            PHPhotoLibrary.shared().performChanges({
-                PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: videoURL)
-            }) { success, error in
-                if !success {
-                    print("Error saving video: \(error!)")
-                } else {
-                    print("VIDEO SAVED IN LIBRARY!!!")
-                }
-            }
-        }
-    }
-
     static func build(images: [UIImage], outputSize: CGSize, completion: @escaping (_ error: Error?, _ url: URL?) -> Void) {
         var photos = images
         let videoOutputURL = FileManager.default.documentDirectory.appending(component: "OutputVideo.mp4")
@@ -139,9 +119,7 @@ class VideoCreator {
             })
         }
     }
-}
 
-extension VideoCreator {
     static func mergeVideoAndAudio(videoUrl: URL, audioUrl: URL, shouldFlipHorizontally: Bool = false) async throws -> Result<URL, Error> {
         let mixComposition = AVMutableComposition()
         var mutableCompositionVideoTrack = [AVMutableCompositionTrack]()
