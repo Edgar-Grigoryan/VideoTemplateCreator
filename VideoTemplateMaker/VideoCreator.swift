@@ -20,7 +20,7 @@ class VideoCreator {
             try FileManager.default.removeItem(atPath: videoOutputURL.path)
         }
 
-        let videoWriter = try AVAssetWriter(outputURL: videoOutputURL, fileType: AVFileType.mp4)
+        let videoWriter = try AVAssetWriter(outputURL: videoOutputURL, fileType: .mp4)
 
         let outputSettings: [String : Any] = [
             AVVideoCodecKey : AVVideoCodecType.h264,
@@ -28,11 +28,11 @@ class VideoCreator {
             AVVideoHeightKey : NSNumber(value: Float(outputSize.height))
         ]
 
-        guard videoWriter.canApply(outputSettings: outputSettings, forMediaType: AVMediaType.video) else {
+        guard videoWriter.canApply(outputSettings: outputSettings, forMediaType: .video) else {
             throw NSError(domain: "something went wrong", code: 1)
         }
 
-        let videoWriterInput = AVAssetWriterInput(mediaType: AVMediaType.video, outputSettings: outputSettings)
+        let videoWriterInput = AVAssetWriterInput(mediaType: .video, outputSettings: outputSettings)
         let sourcePixelBufferAttributesDictionary = [
             kCVPixelBufferPixelFormatTypeKey as String : NSNumber(value: kCVPixelFormatType_32ARGB),
             kCVPixelBufferWidthKey as String: NSNumber(value: Float(outputSize.width)),
@@ -51,7 +51,7 @@ class VideoCreator {
         guard pixelBufferAdaptor.pixelBufferPool != nil else { throw NSError(domain: "something went wrong", code: 3) }
 
         let fps: Int32 = 1
-        let frameDuration = CMTimeMake(value: 1, timescale: fps)
+        let frameDuration = CMTime(value: 1, timescale: fps)
 
         var frameCount: Int64 = 0
         var appendSucceeded = true
@@ -59,10 +59,11 @@ class VideoCreator {
         while (!photos.isEmpty) {
             if (videoWriterInput.isReadyForMoreMediaData) {
                 let nextPhoto = photos.remove(at: 0)
-                let lastFrameTime = CMTimeMake(value: frameCount, timescale: fps)
-                let presentationTime = frameCount == 0 ? lastFrameTime : CMTimeAdd(lastFrameTime, frameDuration)
+                let lastFrameTime = CMTime(value: frameCount, timescale: fps)
+                let presentationTime = frameCount == 0 ? lastFrameTime : (lastFrameTime + frameDuration)
 
                 var pixelBuffer: CVPixelBuffer? = nil
+                
                 let status: CVReturn = CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pixelBufferAdaptor.pixelBufferPool!, &pixelBuffer)
 
                 if let pixelBuffer = pixelBuffer, status == 0 {
@@ -74,18 +75,18 @@ class VideoCreator {
                     let rgbColorSpace = CGColorSpaceCreateDeviceRGB()
                     let context = CGContext(data: data, width: Int(outputSize.width), height: Int(outputSize.height), bitsPerComponent: 8, bytesPerRow: CVPixelBufferGetBytesPerRow(managedPixelBuffer), space: rgbColorSpace, bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue)!
 
-                    context.clear(CGRectMake(0, 0, CGFloat(outputSize.width), CGFloat(outputSize.height)))
+                    context.clear(CGRect(origin: .zero, size: outputSize))
 
-                    let horizontalRatio = CGFloat(outputSize.width) / nextPhoto.size.width
-                    let verticalRatio = CGFloat(outputSize.height) / nextPhoto.size.height
+                    let horizontalRatio = outputSize.width / nextPhoto.size.width
+                    let verticalRatio = outputSize.height / nextPhoto.size.height
                     let aspectRatio = min(horizontalRatio, verticalRatio) // ScaleAspectFit
 
-                    let newSize:CGSize = CGSizeMake(nextPhoto.size.width * aspectRatio, nextPhoto.size.height * aspectRatio)
+                    let newSize = CGSize(width: nextPhoto.size.width * aspectRatio, height: nextPhoto.size.height * aspectRatio)
 
-                    let x = newSize.width < outputSize.width ? (outputSize.width - newSize.width) / 2 : 0
-                    let y = newSize.height < outputSize.height ? (outputSize.height - newSize.height) / 2 : 0
+                    let x = (newSize.width < outputSize.width) ? (outputSize.width - newSize.width) / 2 : 0
+                    let y = (newSize.height < outputSize.height) ? (outputSize.height - newSize.height) / 2 : 0
 
-                    context.draw(nextPhoto.cgImage!, in: CGRectMake(x, y, newSize.width, newSize.height))
+                    context.draw(nextPhoto.cgImage!, in: CGRect(origin: CGPoint(x: x, y: y), size: newSize))
 
                     CVPixelBufferUnlockBaseAddress(managedPixelBuffer, .readOnly)
 
@@ -148,16 +149,16 @@ class VideoCreator {
         mutableCompositionVideoTrack.append(compositionAddVideo)
         mutableCompositionAudioTrack.append(compositionAddAudio)
         mutableCompositionAudioOfVideoTrack.append(compositionAddAudioOfVideo)
-        
-        try await mutableCompositionVideoTrack.first!.insertTimeRange(CMTimeRangeMake(start: .zero, duration: aVideoAssetTrack.load(.timeRange).duration), of: aVideoAssetTrack, at: .zero)
+
+        try await mutableCompositionVideoTrack.first!.insertTimeRange(CMTimeRange(start: .zero, duration: aVideoAssetTrack.load(.timeRange).duration), of: aVideoAssetTrack, at: .zero)
         
         //In my case my audio file is longer then video file so i took videoAsset duration
         //instead of audioAsset duration
-        try await mutableCompositionAudioTrack.first!.insertTimeRange(CMTimeRangeMake(start: .zero, duration: aVideoAssetTrack.load(.timeRange).duration), of: aAudioAssetTrack, at: .zero)
+        try await mutableCompositionAudioTrack.first!.insertTimeRange(CMTimeRange(start: .zero, duration: aVideoAssetTrack.load(.timeRange).duration), of: aAudioAssetTrack, at: .zero)
         
         // adding audio (of the video if exists) asset to the final composition
         if let aAudioOfVideoAssetTrack = aAudioOfVideoAssetTrack {
-            try await mutableCompositionAudioOfVideoTrack.first!.insertTimeRange(CMTimeRangeMake(start: .zero, duration: aVideoAssetTrack.load(.timeRange).duration), of: aAudioOfVideoAssetTrack, at: .zero)
+            try await mutableCompositionAudioOfVideoTrack.first!.insertTimeRange(CMTimeRange(start: .zero, duration: aVideoAssetTrack.load(.timeRange).duration), of: aAudioOfVideoAssetTrack, at: .zero)
         }
         
         // Exporting
