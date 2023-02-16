@@ -29,7 +29,7 @@ class ViewController: UIViewController {
         }
     }
 
-    func fetchAssetsPhotos() -> [UIImage] {
+    private func fetchAssetsPhotos() -> [UIImage] {
         var images = [UIImage]()
         for i in 1...8 {
             images.append(UIImage(named: "image\(i)")!)
@@ -37,7 +37,7 @@ class ViewController: UIViewController {
         return images
     }
 
-    func generateVideoTemplateImages() -> [UIImage] {
+    private func generateVideoTemplateImages() -> [UIImage] {
         var resultImages = [UIImage]()
 
         let fetchedImages = self.fetchAssetsPhotos()
