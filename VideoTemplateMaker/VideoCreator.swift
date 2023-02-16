@@ -13,22 +13,14 @@ import AVKit
 import AssetsLibrary
 
 class VideoCreator {
-    static func build(images: [UIImage], outputSize: CGSize, completion: @escaping (_ error: Error?, _ url: URL?) -> Void) {
+    static func build(images: [UIImage], outputSize: CGSize) async throws -> URL {
         var photos = images
-        let videoOutputURL = FileManager.default.documentDirectory.appending(component: "OutputVideo.mp4")
+        let videoOutputURL = FileManager.default.documentDirectory.appending(component: "video.mp4")
         if FileManager.default.fileExists(atPath: videoOutputURL.path) {
-            do {
-                try FileManager.default.removeItem(atPath: videoOutputURL.path)
-            } catch {
-                completion(NSError(domain: "Unable to delete file: \(error) : \(#function).", code: 2), nil)
-                return
-            }
+            try FileManager.default.removeItem(atPath: videoOutputURL.path)
         }
 
-        guard let videoWriter = try? AVAssetWriter(outputURL: videoOutputURL, fileType: AVFileType.mp4) else {
-            completion(NSError(domain: "AVAssetWriter error", code: 3), nil)
-            return
-        }
+        let videoWriter = try AVAssetWriter(outputURL: videoOutputURL, fileType: AVFileType.mp4)
 
         let outputSettings: [String : Any] = [
             AVVideoCodecKey : AVVideoCodecType.h264,
@@ -37,8 +29,7 @@ class VideoCreator {
         ]
 
         guard videoWriter.canApply(outputSettings: outputSettings, forMediaType: AVMediaType.video) else {
-            completion(NSError(domain: "Negative : Can't apply the Output settings...", code: 4), nil)
-            return
+            throw NSError(domain: "something went wrong", code: 1)
         }
 
         let videoWriterInput = AVAssetWriterInput(mediaType: AVMediaType.video, outputSettings: outputSettings)
@@ -54,73 +45,68 @@ class VideoCreator {
             videoWriter.add(videoWriterInput)
         }
 
-        if videoWriter.startWriting() {
-            videoWriter.startSession(atSourceTime: .zero)
-            assert(pixelBufferAdaptor.pixelBufferPool != nil)
+        guard videoWriter.startWriting() else { throw NSError(domain: "something went wrong", code: 2) }
 
-            let media_queue = DispatchQueue(label: "mediaInputQueue")
+        videoWriter.startSession(atSourceTime: .zero)
+        guard pixelBufferAdaptor.pixelBufferPool != nil else { throw NSError(domain: "something went wrong", code: 3) }
 
-            videoWriterInput.requestMediaDataWhenReady(on: media_queue, using: { () -> Void in
-                let fps: Int32 = 1
-                let frameDuration = CMTimeMake(value: 1, timescale: fps)
+        let fps: Int32 = 1
+        let frameDuration = CMTimeMake(value: 1, timescale: fps)
 
-                var frameCount: Int64 = 0
-                var appendSucceeded = true
+        var frameCount: Int64 = 0
+        var appendSucceeded = true
 
-                while (!photos.isEmpty) {
-                    if (videoWriterInput.isReadyForMoreMediaData) {
-                        let nextPhoto = photos.remove(at: 0)
-                        let lastFrameTime = CMTimeMake(value: frameCount, timescale: fps)
-                        let presentationTime = frameCount == 0 ? lastFrameTime : CMTimeAdd(lastFrameTime, frameDuration)
+        while (!photos.isEmpty) {
+            if (videoWriterInput.isReadyForMoreMediaData) {
+                let nextPhoto = photos.remove(at: 0)
+                let lastFrameTime = CMTimeMake(value: frameCount, timescale: fps)
+                let presentationTime = frameCount == 0 ? lastFrameTime : CMTimeAdd(lastFrameTime, frameDuration)
 
-                        var pixelBuffer: CVPixelBuffer? = nil
-                        let status: CVReturn = CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pixelBufferAdaptor.pixelBufferPool!, &pixelBuffer)
+                var pixelBuffer: CVPixelBuffer? = nil
+                let status: CVReturn = CVPixelBufferPoolCreatePixelBuffer(kCFAllocatorDefault, pixelBufferAdaptor.pixelBufferPool!, &pixelBuffer)
 
-                        if let pixelBuffer = pixelBuffer, status == 0 {
-                            let managedPixelBuffer = pixelBuffer
+                if let pixelBuffer = pixelBuffer, status == 0 {
+                    let managedPixelBuffer = pixelBuffer
 
-                            CVPixelBufferLockBaseAddress(managedPixelBuffer, .readOnly)
+                    CVPixelBufferLockBaseAddress(managedPixelBuffer, .readOnly)
 
-                            let data = CVPixelBufferGetBaseAddress(managedPixelBuffer)
-                            let rgbColorSpace = CGColorSpaceCreateDeviceRGB()
-                            let context = CGContext(data: data, width: Int(outputSize.width), height: Int(outputSize.height), bitsPerComponent: 8, bytesPerRow: CVPixelBufferGetBytesPerRow(managedPixelBuffer), space: rgbColorSpace, bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue)!
+                    let data = CVPixelBufferGetBaseAddress(managedPixelBuffer)
+                    let rgbColorSpace = CGColorSpaceCreateDeviceRGB()
+                    let context = CGContext(data: data, width: Int(outputSize.width), height: Int(outputSize.height), bitsPerComponent: 8, bytesPerRow: CVPixelBufferGetBytesPerRow(managedPixelBuffer), space: rgbColorSpace, bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue)!
 
-                            context.clear(CGRectMake(0, 0, CGFloat(outputSize.width), CGFloat(outputSize.height)))
+                    context.clear(CGRectMake(0, 0, CGFloat(outputSize.width), CGFloat(outputSize.height)))
 
-                            let horizontalRatio = CGFloat(outputSize.width) / nextPhoto.size.width
-                            let verticalRatio = CGFloat(outputSize.height) / nextPhoto.size.height
-                            let aspectRatio = min(horizontalRatio, verticalRatio) // ScaleAspectFit
+                    let horizontalRatio = CGFloat(outputSize.width) / nextPhoto.size.width
+                    let verticalRatio = CGFloat(outputSize.height) / nextPhoto.size.height
+                    let aspectRatio = min(horizontalRatio, verticalRatio) // ScaleAspectFit
 
-                            let newSize:CGSize = CGSizeMake(nextPhoto.size.width * aspectRatio, nextPhoto.size.height * aspectRatio)
+                    let newSize:CGSize = CGSizeMake(nextPhoto.size.width * aspectRatio, nextPhoto.size.height * aspectRatio)
 
-                            let x = newSize.width < outputSize.width ? (outputSize.width - newSize.width) / 2 : 0
-                            let y = newSize.height < outputSize.height ? (outputSize.height - newSize.height) / 2 : 0
+                    let x = newSize.width < outputSize.width ? (outputSize.width - newSize.width) / 2 : 0
+                    let y = newSize.height < outputSize.height ? (outputSize.height - newSize.height) / 2 : 0
 
-                            context.draw(nextPhoto.cgImage!, in: CGRectMake(x, y, newSize.width, newSize.height))
+                    context.draw(nextPhoto.cgImage!, in: CGRectMake(x, y, newSize.width, newSize.height))
 
-                            CVPixelBufferUnlockBaseAddress(managedPixelBuffer, .readOnly)
+                    CVPixelBufferUnlockBaseAddress(managedPixelBuffer, .readOnly)
 
-                            appendSucceeded = pixelBufferAdaptor.append(pixelBuffer, withPresentationTime: presentationTime)
-                        } else {
-                            print("Failed to allocate pixel buffer")
-                            appendSucceeded = false
-                        }
-                        frameCount += 1
-                    }
-                    if !appendSucceeded {
-                        break
-                    }
+                    appendSucceeded = pixelBufferAdaptor.append(pixelBuffer, withPresentationTime: presentationTime)
+                } else {
+                    print("Failed to allocate pixel buffer")
+                    appendSucceeded = false
                 }
-                videoWriterInput.markAsFinished()
-                videoWriter.finishWriting { () -> Void in
-                    print("Video Creation FINISHED!!!")
-                    completion(nil, videoOutputURL)
-                }
-            })
+                frameCount += 1
+            }
+            if !appendSucceeded {
+                break
+            }
         }
+        videoWriterInput.markAsFinished()
+        await videoWriter.finishWriting()
+        
+        return videoOutputURL
     }
 
-    static func mergeVideoAndAudio(videoUrl: URL, audioUrl: URL, shouldFlipHorizontally: Bool = false) async throws -> Result<URL, Error> {
+    static func mergeVideoAndAudio(videoUrl: URL, audioUrl: URL, shouldFlipHorizontally: Bool = false) async throws -> URL {
         let mixComposition = AVMutableComposition()
         var mutableCompositionVideoTrack = [AVMutableCompositionTrack]()
         var mutableCompositionAudioTrack = [AVMutableCompositionTrack]()
@@ -132,15 +118,15 @@ class VideoCreator {
         let aAudioAsset = AVAsset(url: audioUrl)
         
         guard let compositionAddVideo = mixComposition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid) else {
-            return .failure(NSError(domain: "something went wrong", code: 1))
+            throw NSError(domain: "something went wrong", code: 1)
         }
         
         guard let compositionAddAudio = mixComposition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) else {
-            return .failure(NSError(domain: "something went wrong", code: 2))
+            throw NSError(domain: "something went wrong", code: 2)
         }
         
         guard let compositionAddAudioOfVideo = mixComposition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) else {
-            return .failure(NSError(domain: "something went wrong", code: 3))
+            throw NSError(domain: "something went wrong", code: 3)
         }
         
         let aVideoAssetTrack: AVAssetTrack = try await aVideoAsset.loadTracks(withMediaType: .video).first!
@@ -175,9 +161,11 @@ class VideoCreator {
         }
         
         // Exporting
-        let savePathUrl: URL = URL(fileURLWithPath: NSHomeDirectory() + "/Documents/newVideo.mp4")
+        let savePathUrl = FileManager.default.documentDirectory.appending(component: "videoWithAudio.mp4")
         // delete old video
-        try FileManager.default.removeItem(at: savePathUrl)
+        if FileManager.default.fileExists(atPath: savePathUrl.path) {
+            try FileManager.default.removeItem(atPath: savePathUrl.path)
+        }
         
         let assetExport: AVAssetExportSession = AVAssetExportSession(asset: mixComposition, presetName: AVAssetExportPresetHighestQuality)!
         assetExport.outputFileType = .mp4
@@ -187,9 +175,9 @@ class VideoCreator {
         await assetExport.export()
         
         if let error = assetExport.error {
-            return .failure(error)
+            throw error
         }
 
-        return .success(savePathUrl)
+        return savePathUrl
     }
 }

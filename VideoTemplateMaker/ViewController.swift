@@ -15,16 +15,13 @@ class ViewController: UIViewController {
         Task {
             let size = CGSize(width: 1024, height: 1024)
             let images = self.generateVideoTemplateImages()
-            VideoCreator.build(images: images, outputSize: size) { error, url in
+            do {
+                let videoURL = try await VideoCreator.build(images: images, outputSize: size)
                 let audioURL = Bundle.main.url(forResource: "music", withExtension: "aac")!
-                Task {
-                    do {
-                        let videoURL = try await VideoCreator.mergeVideoAndAudio(videoUrl: url!, audioUrl: audioURL)
-                        print("ALL TASKS ARE FINISHED!!!!! URL: \(videoURL)")
-                    } catch (let error) {
-                        print(error.localizedDescription)
-                    }
-                }
+                let videoWithAudioURL = try await VideoCreator.mergeVideoAndAudio(videoUrl: videoURL, audioUrl: audioURL)
+                print("ALL TASKS ARE FINISHED!!!!! URL: \(videoWithAudioURL)")
+            } catch (let error) {
+                print(error.localizedDescription)
             }
         }
     }
