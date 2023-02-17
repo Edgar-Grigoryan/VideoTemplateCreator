@@ -93,31 +93,28 @@ class VideoCreator {
     }
 
     static func mergeVideoAndAudio(videoUrl: URL, audioUrl: URL) async throws -> URL {
-        let mixComposition = AVMutableComposition()
-        
-        //start merge
-        
         let aVideoAsset = AVAsset(url: videoUrl)
         let aAudioAsset = AVAsset(url: audioUrl)
+
+        let mixComposition = AVMutableComposition()
         
         guard let compositionAddVideo = mixComposition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid) else {
             throw NSError(domain: "something went wrong", code: 1)
         }
-        
         guard let compositionAddAudio = mixComposition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) else {
             throw NSError(domain: "something went wrong", code: 2)
         }
-        
-        let aVideoAssetTrack: AVAssetTrack = try await aVideoAsset.loadTracks(withMediaType: .video).first!
-        let aAudioAssetTrack: AVAssetTrack = try await aAudioAsset.loadTracks(withMediaType: .audio).first!
+        guard let aVideoAssetTrack = try await aVideoAsset.loadTracks(withMediaType: .video).first else {
+            throw NSError(domain: "something went wrong", code: 3)
+        }
+        guard let aAudioAssetTrack = try await aAudioAsset.loadTracks(withMediaType: .audio).first else {
+            throw NSError(domain: "something went wrong", code: 4)
+        }
         
         // Default must have tranformation
         compositionAddVideo.preferredTransform = try await aVideoAssetTrack.load(.preferredTransform)
 
         try await compositionAddVideo.insertTimeRange(CMTimeRange(start: .zero, duration: aVideoAssetTrack.load(.timeRange).duration), of: aVideoAssetTrack, at: .zero)
-        
-        //In my case my audio file is longer then video file so i took videoAsset duration
-        //instead of audioAsset duration
         try await compositionAddAudio.insertTimeRange(CMTimeRange(start: .zero, duration: aVideoAssetTrack.load(.timeRange).duration), of: aAudioAssetTrack, at: .zero)
         
         // Exporting
