@@ -94,9 +94,6 @@ class VideoCreator {
 
     static func mergeVideoAndAudio(videoUrl: URL, audioUrl: URL) async throws -> URL {
         let mixComposition = AVMutableComposition()
-        var mutableCompositionVideoTrack = [AVMutableCompositionTrack]()
-        var mutableCompositionAudioTrack = [AVMutableCompositionTrack]()
-        var mutableCompositionAudioOfVideoTrack = [AVMutableCompositionTrack]()
         
         //start merge
         
@@ -111,25 +108,17 @@ class VideoCreator {
             throw NSError(domain: "something went wrong", code: 2)
         }
         
-        guard let compositionAddAudioOfVideo = mixComposition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) else {
-            throw NSError(domain: "something went wrong", code: 3)
-        }
-        
         let aVideoAssetTrack: AVAssetTrack = try await aVideoAsset.loadTracks(withMediaType: .video).first!
         let aAudioAssetTrack: AVAssetTrack = try await aAudioAsset.loadTracks(withMediaType: .audio).first!
         
         // Default must have tranformation
         compositionAddVideo.preferredTransform = try await aVideoAssetTrack.load(.preferredTransform)
-        
-        mutableCompositionVideoTrack.append(compositionAddVideo)
-        mutableCompositionAudioTrack.append(compositionAddAudio)
-        mutableCompositionAudioOfVideoTrack.append(compositionAddAudioOfVideo)
 
-        try await mutableCompositionVideoTrack.first!.insertTimeRange(CMTimeRange(start: .zero, duration: aVideoAssetTrack.load(.timeRange).duration), of: aVideoAssetTrack, at: .zero)
+        try await compositionAddVideo.insertTimeRange(CMTimeRange(start: .zero, duration: aVideoAssetTrack.load(.timeRange).duration), of: aVideoAssetTrack, at: .zero)
         
         //In my case my audio file is longer then video file so i took videoAsset duration
         //instead of audioAsset duration
-        try await mutableCompositionAudioTrack.first!.insertTimeRange(CMTimeRange(start: .zero, duration: aVideoAssetTrack.load(.timeRange).duration), of: aAudioAssetTrack, at: .zero)
+        try await compositionAddAudio.insertTimeRange(CMTimeRange(start: .zero, duration: aVideoAssetTrack.load(.timeRange).duration), of: aAudioAssetTrack, at: .zero)
         
         // Exporting
         let savePathUrl = FileManager.default.documentDirectory.appending(component: "videoWithAudio.mp4")
