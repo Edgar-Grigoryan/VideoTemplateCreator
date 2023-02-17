@@ -92,7 +92,7 @@ class VideoCreator {
         return videoOutputURL
     }
 
-    static func mergeVideoAndAudio(videoUrl: URL, audioUrl: URL, shouldFlipHorizontally: Bool = false) async throws -> URL {
+    static func mergeVideoAndAudio(videoUrl: URL, audioUrl: URL) async throws -> URL {
         let mixComposition = AVMutableComposition()
         var mutableCompositionVideoTrack = [AVMutableCompositionTrack]()
         var mutableCompositionAudioTrack = [AVMutableCompositionTrack]()
@@ -116,20 +116,10 @@ class VideoCreator {
         }
         
         let aVideoAssetTrack: AVAssetTrack = try await aVideoAsset.loadTracks(withMediaType: .video).first!
-        let aAudioOfVideoAssetTrack: AVAssetTrack? = try await aVideoAsset.loadTracks(withMediaType: .audio).first
         let aAudioAssetTrack: AVAssetTrack = try await aAudioAsset.loadTracks(withMediaType: .audio).first!
         
         // Default must have tranformation
         compositionAddVideo.preferredTransform = try await aVideoAssetTrack.load(.preferredTransform)
-        
-        if shouldFlipHorizontally {
-            // Flip video horizontally
-            var frontalTransform: CGAffineTransform = CGAffineTransform(scaleX: -1.0, y: 1.0)
-            
-            frontalTransform = try await frontalTransform.translatedBy(x: -aVideoAssetTrack.load(.naturalSize).width, y: 0.0)
-            frontalTransform = try await frontalTransform.translatedBy(x: 0.0, y: -aVideoAssetTrack.load(.naturalSize).width)
-            compositionAddVideo.preferredTransform = frontalTransform
-        }
         
         mutableCompositionVideoTrack.append(compositionAddVideo)
         mutableCompositionAudioTrack.append(compositionAddAudio)
@@ -140,11 +130,6 @@ class VideoCreator {
         //In my case my audio file is longer then video file so i took videoAsset duration
         //instead of audioAsset duration
         try await mutableCompositionAudioTrack.first!.insertTimeRange(CMTimeRange(start: .zero, duration: aVideoAssetTrack.load(.timeRange).duration), of: aAudioAssetTrack, at: .zero)
-        
-        // adding audio (of the video if exists) asset to the final composition
-        if let aAudioOfVideoAssetTrack = aAudioOfVideoAssetTrack {
-            try await mutableCompositionAudioOfVideoTrack.first!.insertTimeRange(CMTimeRange(start: .zero, duration: aVideoAssetTrack.load(.timeRange).duration), of: aAudioOfVideoAssetTrack, at: .zero)
-        }
         
         // Exporting
         let savePathUrl = FileManager.default.documentDirectory.appending(component: "videoWithAudio.mp4")
