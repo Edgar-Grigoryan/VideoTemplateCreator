@@ -24,8 +24,8 @@ class VideoCreator {
 
         let outputSettings: [String : Any] = [
             AVVideoCodecKey : AVVideoCodecType.h264,
-            AVVideoWidthKey : NSNumber(value: Float(outputSize.width)),
-            AVVideoHeightKey : NSNumber(value: Float(outputSize.height))
+            AVVideoWidthKey : outputSize.width,
+            AVVideoHeightKey : outputSize.height
         ]
 
         guard videoWriter.canApply(outputSettings: outputSettings, forMediaType: .video) else {
@@ -33,10 +33,10 @@ class VideoCreator {
         }
 
         let videoWriterInput = AVAssetWriterInput(mediaType: .video, outputSettings: outputSettings)
-        let sourcePixelBufferAttributesDictionary = [
-            kCVPixelBufferPixelFormatTypeKey as String : NSNumber(value: kCVPixelFormatType_32ARGB),
-            kCVPixelBufferWidthKey as String: NSNumber(value: Float(outputSize.width)),
-            kCVPixelBufferHeightKey as String: NSNumber(value: Float(outputSize.height))
+        let sourcePixelBufferAttributesDictionary: [String : Any] = [
+            kCVPixelBufferPixelFormatTypeKey as String : kCVPixelFormatType_32ARGB,
+            kCVPixelBufferWidthKey as String: outputSize.width,
+            kCVPixelBufferHeightKey as String: outputSize.height
         ]
         
         let pixelBufferAdaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: videoWriterInput, sourcePixelBufferAttributes: sourcePixelBufferAttributesDictionary)
