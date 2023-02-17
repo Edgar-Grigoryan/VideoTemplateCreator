@@ -126,3 +126,18 @@ extension FileManager {
         return self.urls(for: .documentDirectory, in: .userDomainMask).first!        
     }
 }
+
+extension CGSize {
+    func fitted(in targetSize: CGSize) -> CGRect {
+        let horizontalRatio = targetSize.width / self.width
+        let verticalRatio = targetSize.height / self.height
+        let aspectRatio = min(horizontalRatio, verticalRatio)
+
+        let newSize = CGSize(width: self.width * aspectRatio, height: self.height * aspectRatio)
+
+        let x = (newSize.width < targetSize.width) ? (targetSize.width - newSize.width) / 2 : 0
+        let y = (newSize.height < targetSize.height) ? (targetSize.height - newSize.height) / 2 : 0
+        
+        return CGRect(x: x, y: y, width: newSize.width, height: newSize.height)
+    }
+}

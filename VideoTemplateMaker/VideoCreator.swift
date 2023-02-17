@@ -33,13 +33,13 @@ class VideoCreator {
         }
 
         let videoWriterInput = AVAssetWriterInput(mediaType: .video, outputSettings: outputSettings)
-        let sourcePixelBufferAttributesDictionary: [String : Any] = [
+        let sourcePixelBufferAttributes: [String : Any] = [
             kCVPixelBufferPixelFormatTypeKey as String : kCVPixelFormatType_32ARGB,
             kCVPixelBufferWidthKey as String: outputSize.width,
             kCVPixelBufferHeightKey as String: outputSize.height
         ]
         
-        let pixelBufferAdaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: videoWriterInput, sourcePixelBufferAttributes: sourcePixelBufferAttributesDictionary)
+        let pixelBufferAdaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: videoWriterInput, sourcePixelBufferAttributes: sourcePixelBufferAttributes)
 
         if videoWriter.canAdd(videoWriterInput) {
             videoWriter.add(videoWriterInput)
@@ -54,11 +54,10 @@ class VideoCreator {
         let frameDuration = CMTime(value: 1, timescale: fps)
 
         var frameCount: Int64 = 0
-        var appendSucceeded = true
 
         while (!photos.isEmpty) {
             if (videoWriterInput.isReadyForMoreMediaData) {
-                let nextPhoto = photos.remove(at: 0)
+                let photo = photos.remove(at: 0)
                 let lastFrameTime = CMTime(value: frameCount, timescale: fps)
                 let presentationTime = frameCount == 0 ? lastFrameTime : (lastFrameTime + frameDuration)
 
@@ -76,29 +75,15 @@ class VideoCreator {
                     let context = CGContext(data: data, width: Int(outputSize.width), height: Int(outputSize.height), bitsPerComponent: 8, bytesPerRow: CVPixelBufferGetBytesPerRow(managedPixelBuffer), space: rgbColorSpace, bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue)!
 
                     context.clear(CGRect(origin: .zero, size: outputSize))
-
-                    let horizontalRatio = outputSize.width / nextPhoto.size.width
-                    let verticalRatio = outputSize.height / nextPhoto.size.height
-                    let aspectRatio = min(horizontalRatio, verticalRatio) // ScaleAspectFit
-
-                    let newSize = CGSize(width: nextPhoto.size.width * aspectRatio, height: nextPhoto.size.height * aspectRatio)
-
-                    let x = (newSize.width < outputSize.width) ? (outputSize.width - newSize.width) / 2 : 0
-                    let y = (newSize.height < outputSize.height) ? (outputSize.height - newSize.height) / 2 : 0
-
-                    context.draw(nextPhoto.cgImage!, in: CGRect(origin: CGPoint(x: x, y: y), size: newSize))
+                    context.draw(photo.cgImage!, in: photo.size.fitted(in: outputSize))
 
                     CVPixelBufferUnlockBaseAddress(managedPixelBuffer, .readOnly)
 
-                    appendSucceeded = pixelBufferAdaptor.append(pixelBuffer, withPresentationTime: presentationTime)
+                    pixelBufferAdaptor.append(pixelBuffer, withPresentationTime: presentationTime)
                 } else {
-                    print("Failed to allocate pixel buffer")
-                    appendSucceeded = false
+                    throw NSError(domain: "something went wrong", code: 4)
                 }
                 frameCount += 1
-            }
-            if !appendSucceeded {
-                break
             }
         }
         videoWriterInput.markAsFinished()
