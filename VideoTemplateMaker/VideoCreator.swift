@@ -111,15 +111,13 @@ class VideoCreator {
             throw NSError(domain: "something went wrong", code: 4)
         }
         
-        // Default must have tranformation
         compositionAddVideo.preferredTransform = try await aVideoAssetTrack.load(.preferredTransform)
 
         try await compositionAddVideo.insertTimeRange(CMTimeRange(start: .zero, duration: aVideoAssetTrack.load(.timeRange).duration), of: aVideoAssetTrack, at: .zero)
         try await compositionAddAudio.insertTimeRange(CMTimeRange(start: .zero, duration: aVideoAssetTrack.load(.timeRange).duration), of: aAudioAssetTrack, at: .zero)
-        
-        // Exporting
+
         let savePathUrl = FileManager.default.documentDirectory.appending(component: "videoWithAudio.mp4")
-        // delete old video
+
         if FileManager.default.fileExists(atPath: savePathUrl.path) {
             try FileManager.default.removeItem(atPath: savePathUrl.path)
         }
